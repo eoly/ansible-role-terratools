@@ -1,0 +1,59 @@
+---
+
+- name: set terragrunt_binary_name fact
+  set_fact:
+    terragrunt_binary_name: "terragrunt_linux_{{ terragrunt_system_arch }}"
+
+- name: set terragrunt_release_url fact
+  set_fact:
+    terragrunt_release_url: "{{ terragrunt_release_base_url }}/v{{ terragrunt_binary_version }}/{{ terragrunt_binary_name }}"
+
+- name: set terragrunt_install_path fact
+  set_fact:
+    terragrunt_install_path: "{{ terratools_install_path }}/terragrunt-{{ terragrunt_binary_version }}"
+
+- name: set terragrunt_major_minor fact
+  set_fact:
+    terragrunt_major_minor: "{{ terragrunt_binary_version | regex_replace('^([0-9])\\.([0-9]*).*', '\\1.\\2') }}"
+
+- name: set terragrunt_binary_path fact
+  set_fact:
+    terragrunt_binary_path: "{{ terragrunt_install_path }}/terragrunt"
+
+- name: "check if terragrunt {{ terragrunt_binary_version }} already is installed"
+  stat:
+    path: "{{ terragrunt_binary_path }}"
+  register: terragrunt_binary_file
+
+- name: create terragrunt dir
+  file:
+    path: "{{ terragrunt_install_path }}"
+    state: directory
+    mode: "0755"
+
+- name: download terragrunt binary from github
+  get_url:
+    url: "{{ terragrunt_release_url }}"
+    dest: "{{ terragrunt_install_path }}/terragrunt"
+    mode: '0755'
+  when: not terragrunt_binary_file.stat.exists
+
+- name: ensure terragrunt binary is executable
+  file:
+    path: "{{ terragrunt_binary_path }}"
+    mode: 0755
+
+- name: symlink terragrunt binary to path
+  file:
+    src: "{{ terragrunt_binary_path }}"
+    dest: "/usr/local/bin/terragrunt-{{ terragrunt_major_minor }}"
+    force: yes
+    state: link
+
+- name: symlink active terragrunt binary to path
+  file:
+    src: "{{ terragrunt_binary_path }}"
+    dest: "/usr/local/bin/terragrunt"
+    force: yes
+    state: link
+  when: (terragrunt_binary_version == terragrunt_active_version)

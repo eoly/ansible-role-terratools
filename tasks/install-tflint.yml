@@ -1,0 +1,59 @@
+---
+
+- name: set tflint_archive_name fact
+  set_fact:
+    tflint_archive_name: "tflint_linux_{{ tflint_system_arch }}.zip"
+
+- name: set tflint_release_url fact
+  set_fact:
+    tflint_release_url: "{{ tflint_release_base_url }}/v{{ tflint_archive_version }}/{{ tflint_archive_name }}"
+
+- name: set tflint_install_path fact
+  set_fact:
+    tflint_install_path: "{{ terratools_install_path }}/tflint-{{ tflint_archive_version }}"
+
+- name: set tflint_major_minor fact
+  set_fact:
+    tflint_major_minor: "{{ tflint_archive_version | regex_replace('^([0-9])\\.([0-9]*).*', '\\1.\\2') }}"
+
+- name: set tflint_binary_path fact
+  set_fact:
+    tflint_binary_path: "{{ tflint_install_path }}/tflint"
+
+- name: "check if tflint {{ tflint_archive_version }} already is installed"
+  stat:
+    path: "{{ tflint_binary_path }}"
+  register: tflint_binary_file
+
+- name: create tflint dir
+  file:
+    path: "{{ tflint_install_path }}"
+    state: directory
+    mode: "0755"
+
+- name: download tflint archive and extract
+  unarchive:
+    src: "{{ tflint_release_url }}"
+    dest: "{{ tflint_install_path }}"
+    remote_src: yes
+  when: not tflint_binary_file.stat.exists
+
+- name: ensure tflint binary is executable
+  file:
+    path: "{{ tflint_binary_path }}"
+    mode: 0755
+
+- name: symlink tflint binary to path
+  file:
+    src: "{{ tflint_binary_path }}"
+    dest: "/usr/local/bin/tflint-{{ tflint_major_minor }}"
+    force: yes
+    state: link
+
+- name: symlink active tflint binary to path
+  file:
+    src: "{{ tflint_binary_path }}"
+    dest: "/usr/local/bin/tflint"
+    force: yes
+    state: link
+  when: (tflint_archive_version == tflint_active_version)

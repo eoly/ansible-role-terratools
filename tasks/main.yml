@@ -1,0 +1,26 @@
+---
+# tasks file for terratools
+
+- name: create terratools dir
+  file:
+    path: "{{ terratools_install_path }}"
+    state: directory
+    mode: "0755"
+
+- name: install terraform versions
+  include_tasks: "tasks/install-terraform.yml"
+  loop: "{{ terraform_archive_versions }}"
+  loop_control:
+    loop_var: terraform_archive_version
+
+- name: install terragrunt versions
+  include_tasks: "tasks/install-terragrunt.yml"
+  loop: "{{ terragrunt_binary_versions }}"
+  loop_control:
+    loop_var: terragrunt_binary_version
+
+- name: install tflint versions
+  include_tasks: "tasks/install-tflint.yml"
+  loop: "{{ tflint_archive_versions }}"
+  loop_control:
+    loop_var: tflint_archive_version

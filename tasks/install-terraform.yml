@@ -1,0 +1,59 @@
+---
+
+- name: set terraform_archive_name fact
+  set_fact:
+    terraform_archive_name: "terraform_{{ terraform_archive_version }}_linux_{{ terraform_system_arch }}.zip"
+
+- name: set terraform_release_url fact
+  set_fact:
+    terraform_release_url: "{{ terraform_release_base_url }}/{{ terraform_archive_version }}/{{ terraform_archive_name }}"
+
+- name: set terraform_install_path fact
+  set_fact:
+    terraform_install_path: "{{ terratools_install_path }}/terraform-{{ terraform_archive_version }}"
+
+- name: set terraform_major_minor fact
+  set_fact:
+    terraform_major_minor: "{{ terraform_archive_version | regex_replace('^([0-9])\\.([0-9]*).*', '\\1.\\2') }}"
+
+- name: set terraform_binary_path fact
+  set_fact:
+    terraform_binary_path: "{{ terraform_install_path }}/terraform"
+
+- name: "check if terraform {{ terraform_archive_version }} already is installed"
+  stat:
+    path: "{{ terraform_binary_path }}"
+  register: terraform_binary_file
+
+- name: create terraform dir
+  file:
+    path: "{{ terraform_install_path }}"
+    state: directory
+    mode: "0755"
+
+- name: "download terraform archive and extract {{ terraform_archive_version }}"
+  unarchive:
+    src: "{{ terraform_release_url }}"
+    dest: "{{ terraform_install_path }}"
+    remote_src: yes
+  when: not terraform_binary_file.stat.exists
+
+- name: ensure terraform binary is executable
+  file:
+    path: "{{ terraform_binary_path }}"
+    mode: 0755
+
+- name: symlink terraform binary to path
+  file:
+    src: "{{ terraform_binary_path }}"
+    dest: "/usr/local/bin/terraform-{{ terraform_major_minor }}"
+    force: yes
+    state: link
+
+- name: symlink active terraform binary to path
+  file:
+    src: "{{ terraform_binary_path }}"
+    dest: "/usr/local/bin/terraform"
+    force: yes
+    state: link
+  when: (terraform_archive_version == terraform_active_version)
